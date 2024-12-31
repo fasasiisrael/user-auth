@@ -1,21 +1,24 @@
 const mysql = require('mysql2/promise');
 require('dotenv').config();
 
+const DATABASE_URL = process.env.DATABASE_URL;
+const url = new URL(DATABASE_URL);
+
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+  host: url.hostname,
+  user: url.username,
+  password: url.password,
+  database: url.pathname.slice(1),
+  port: url.port,
+  ssl: {
+    rejectUnauthorized: false, // Allow self-signed certificates
+  },
 });
 
 async function initializeDatabase() {
   const connection = await pool.getConnection();
   try {
-    await connection.query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME}`);
-    await connection.query(`USE ${process.env.DB_NAME}`);
+    console.log('Initializing database schema...');
 
     await connection.query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -52,9 +55,9 @@ async function initializeDatabase() {
       )
     `);
 
-    console.log('Database initialized successfully');
+    console.log('Database initialized successfully.');
   } catch (error) {
-    console.error('Database initialization failed:', error);
+    console.error('Database initialization failed:', error.message);
     throw error;
   } finally {
     connection.release();
@@ -70,10 +73,15 @@ async function transaction(callback) {
     return result;
   } catch (error) {
     await connection.rollback();
+    console.error('Transaction failed:', error.message);
     throw error;
   } finally {
     connection.release();
   }
 }
 
-module.exports = { pool, initializeDatabase, transaction };
+module.exports = {
+  pool,
+  initializeDatabase,
+  transaction,
+};
