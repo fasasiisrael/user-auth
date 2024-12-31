@@ -6,10 +6,10 @@ const authRoutes = require('./routes/auth');
 const profileRoutes = require('./routes/profile');
 const deviceRoutes = require('./routes/devices');
 
+const app = express();
+
 // Initialize database
 initializeDatabase();
-
-const app = express();
 
 // Middleware
 app.use(helmet());
@@ -28,7 +28,11 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;
